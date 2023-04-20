@@ -1,8 +1,10 @@
 from socket import *
 from threading import *
 
+
 class PokerServer:
     clients = dict()
+
     def run(self):
         serverTcpSocket = socket(AF_INET, SOCK_STREAM)
         serverTcpSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, True)
@@ -20,9 +22,8 @@ class PokerServer:
                             daemon=True,
                             name=f"{clientIdentity}")
             for client in self.clients.keys():
-                self.clients[client].send("BROADCAST".encode())
-                self.clients[client].send("[SERVER]".encode())
-                self.clients[client].send(f"{clientIdentity} joined the lobby.".encode())
+                    self.clients[client].send(
+                        f"BROADCAST##[SERVER]##{clientIdentity} joined the lobby.".encode())
             thread.start()
 
     def receive(self, ClientTcpSocket, ClientIdentity):
@@ -33,30 +34,27 @@ class PokerServer:
                 print(f"{ClientIdentity} left the lobby.")
                 self.clients.pop(ClientIdentity)
                 for client in self.clients.keys():
-                    self.clients[client].send("BROADCAST".encode())
-                    self.clients[client].send("[SERVER]".encode())
-                    self.clients[client].send(f"{ClientIdentity} left the lobby.".encode())
+                    self.clients[client].send(
+                        f"BROADCAST##[SERVER]##{ClientIdentity} left the lobby.".encode())
                 break
 
             if clientMessage:
                 print(f"{ClientIdentity} > {clientMessage}")
 
                 for client in self.clients.keys():
-                    self.clients[client].send("BROADCAST".encode())
-                    self.clients[client].send(f"{ClientIdentity}".encode())
-                    self.clients[client].send(f"{clientMessage}".encode())
-
+                    self.clients[client].send(
+                        f"BROADCAST##{ClientIdentity}##{clientMessage}".encode())
                 # ClientTcpSocket.send("Received".encode())
             else:
                 print(f"{ClientIdentity} left the lobby.")
                 self.clients.pop(ClientIdentity)
 
                 for client in self.clients.keys():
-                    self.clients[client].send("BROADCAST".encode())
-                    self.clients[client].send("[SERVER]".encode())
-                    self.clients[client].send(f"{ClientIdentity} left the lobby.".encode())
+                    self.clients[client].send(
+                        f"BROADCAST##[SERVER]##{ClientIdentity} left the lobby.".encode())
                 ClientTcpSocket.close()
                 break
+
 
 if __name__ == '__main__':
     newPokerServer = PokerServer()

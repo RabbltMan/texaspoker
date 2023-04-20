@@ -3,24 +3,27 @@ from random import *
 from threading import *
 from time import sleep
 from tkinter import *
+from base64 import b64decode
 
 
 class PokerClient:
     SERVER_SIGNAL = ["BROADCAST", ]
 
     def run(self):
-        clientTcpSocket = socket(AF_INET, SOCK_STREAM)
-        serverAddress = ("127.0.0.1", 11451)
-
-        print("Connecting...")
         while True:
             try:
+                domain = input("界面还没搓，在这里粘贴那串神奇的代码: ").encode()
+                for i in range(4):
+                    domain = b64decode(domain)
+                clientTcpSocket = socket(AF_INET, SOCK_STREAM)
+                serverAddress = (domain.decode(), 11451)
+                print("Connecting...")
                 clientTcpSocket.connect(serverAddress)
-                print(f"Connected to {serverAddress}")
+                # print(f"Connected to {serverAddress}")
                 break
-            except ConnectionRefusedError:
-                print("Couldn't Connect to Server. Retry in 15s")
-                sleep(15)
+            except:
+                print("Couldn't Connect to Server.")
+                # sleep(15)
                 continue
 
         alphabet = 'QWERTYUIOPASDFGHJKLZXCVBNM'
@@ -29,35 +32,32 @@ class PokerClient:
             identity += alphabet[randint(0, len(alphabet)-1)]
         clientTcpSocket.send(identity.encode())
 
-        thread_1 = Thread(target=self.receiveServerResponse, args=(
-            identity, clientTcpSocket), daemon=True, name='ServerResponse')
-        thread_1.start()
-
         self.clientWindow(clientTcpSocket)
-
-    def receiveServerResponse(self, identity, clientTcpSocket):
-        while True:
-            sleep(0.1)
-            request = input(f"{identity}: ")
-            if (request):
-                clientTcpSocket.send(request.encode())
-                # serverResponse = clientTcpSocket.recv(1024)
-                # print(f"[Server] {serverResponse.decode()}")
-            else:
-                continue
 
     def clientWindow(self, clientTcpSocket):
 
         def receiveBroadcast(ClientTcpSocket, Broadcast):
             while True:
-                broadcaseIdentity = ClientTcpSocket.recv(1024).decode()
-                if (broadcaseIdentity == 'BROADCAST'):
-                    userIdentity = ClientTcpSocket.recv(1024).decode()
-                    message = ClientTcpSocket.recv(1024).decode()
+                receiveContent = ClientTcpSocket.recv(1024).decode().split('##', 2)
+                if (receiveContent[0] == 'BROADCAST'):
+                    userIdentity = receiveContent[1]
+                    message = receiveContent[2]
                     print(f"{userIdentity} > {message}")
                     Broadcast.config(state='normal')
                     Broadcast.insert('end', f"{userIdentity} > {message}\n")
                     Broadcast.config(state='disabled')
+
+        def HandleSendMessage(event=None):
+            if (clientInputBox.get('0.0', 'end')):
+                message = clientInputBox.get('0.0', 'end')[0:-1]
+                if (message):
+                    clientTcpSocket.send(message.encode())
+                clientInputBox.delete('0.0', 'end')
+            return 'break'
+
+        def HandleNewRow(event):
+            clientInputBox.insert('end', '\n')
+            return 'break'
 
         newClientWindow = Tk()
         newClientWindow.title("Texas Hold'Em Client")
@@ -74,11 +74,21 @@ class PokerClient:
         clientZone.grid_propagate(False)
         broadcast = Text(clientZone, height=30, width=40,
                          bd=6, bg="darkgray", font=('宋体', 13), state='disabled')
-        broadcast.grid(row=0, column=0, padx=6, pady=6)
+        broadcast.grid(row=0, column=0, padx=8, pady=6,
+                       columnspan=2, sticky='W')
 
         BroadcastThread = Thread(target=receiveBroadcast, args=(
             clientTcpSocket, broadcast), daemon=True, name='broadcast')
         BroadcastThread.start()
+
+        clientInputBox = Text(clientZone, width=35, height=3,
+                              bd=6, bg="darkgray", font=('宋体', 13))
+        clientInputBox.bind("<Return>", HandleSendMessage)
+        clientInputBox.bind("<Alt-Return>", HandleNewRow)
+        clientInputBox.grid(row=1, column=0, sticky='E')
+        sendBtn = Button(clientZone, width=4, height=3, bd=3,
+                         bg="darkgray", text='发送\nEnter', command=HandleSendMessage)
+        sendBtn.grid(row=1, column=1, ipadx=1)
 
         newClientWindow.mainloop()
 
