@@ -2,9 +2,12 @@ from socket import *
 from random import *
 from threading import *
 from time import sleep
+from tkinter import *
+
 
 class PokerClient:
     SERVER_SIGNAL = ["BROADCAST", ]
+
     def run(self):
         clientTcpSocket = socket(AF_INET, SOCK_STREAM)
         serverAddress = ("127.0.0.1", 11451)
@@ -26,9 +29,11 @@ class PokerClient:
             identity += alphabet[randint(0, len(alphabet)-1)]
         clientTcpSocket.send(identity.encode())
 
-        thread = Thread(target=self.receiveBroadcast, args=(clientTcpSocket,), daemon=True)
-        thread.start()
-        self.receiveServerResponse(identity, clientTcpSocket)
+        thread_1 = Thread(target=self.receiveServerResponse, args=(
+            identity, clientTcpSocket), daemon=True, name='ServerResponse')
+        thread_1.start()
+
+        self.clientWindow(clientTcpSocket)
 
     def receiveServerResponse(self, identity, clientTcpSocket):
         while True:
@@ -41,13 +46,42 @@ class PokerClient:
             else:
                 continue
 
-    def receiveBroadcast(self, clientTcpSocket):
-        while True:
-            broadcaseIdentity = clientTcpSocket.recv(1024).decode()
-            if (broadcaseIdentity == 'BROADCAST'):
-                userIdentity = clientTcpSocket.recv(1024).decode()
-                message = clientTcpSocket.recv(1024).decode()
-                print(f"{userIdentity} > {message}")
+    def clientWindow(self, clientTcpSocket):
+
+        def receiveBroadcast(ClientTcpSocket, Broadcast):
+            while True:
+                broadcaseIdentity = ClientTcpSocket.recv(1024).decode()
+                if (broadcaseIdentity == 'BROADCAST'):
+                    userIdentity = ClientTcpSocket.recv(1024).decode()
+                    message = ClientTcpSocket.recv(1024).decode()
+                    print(f"{userIdentity} > {message}")
+                    Broadcast.config(state='normal')
+                    Broadcast.insert('end', f"{userIdentity} > {message}\n")
+                    Broadcast.config(state='disabled')
+
+        newClientWindow = Tk()
+        newClientWindow.title("Texas Hold'Em Client")
+        newClientWindow.geometry('1500x700+10+40')
+        newClientWindow.resizable(False, False)
+
+        cardsZone = Frame(newClientWindow, height=700,
+                          width=1100, bd=10, bg='green', relief='sunken')
+        cardsZone.grid(row=0, column=0)
+
+        clientZone = Frame(newClientWindow, height=700,
+                           width=400, bd=5, bg='gray', relief='sunken')
+        clientZone.grid(row=0, column=1)
+        clientZone.grid_propagate(False)
+        broadcast = Text(clientZone, height=30, width=40,
+                         bd=6, bg="darkgray", font=('宋体', 13), state='disabled')
+        broadcast.grid(row=0, column=0, padx=6, pady=6)
+
+        BroadcastThread = Thread(target=receiveBroadcast, args=(
+            clientTcpSocket, broadcast), daemon=True, name='broadcast')
+        BroadcastThread.start()
+
+        newClientWindow.mainloop()
+
 
 newPokerClient = PokerClient()
 newPokerClient.run()
