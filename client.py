@@ -10,6 +10,7 @@ class PokerClient:
     SERVER_SIGNAL = ["BROADCAST", ]
 
     def run(self):
+        self.connectionWindow()
         while True:
             try:
                 domain = input("界面还没搓，在这里粘贴那串神奇的代码: ").encode()
@@ -34,8 +35,18 @@ class PokerClient:
 
         self.clientWindow(clientTcpSocket)
 
-    def clientWindow(self, clientTcpSocket):
+    def connectionWindow(self):
+        newConnectionWindow = Tk()
+        newConnectionWindow.title("加入 Texas Hold'Em 派对")
+        newConnectionWindow.geometry('400x250+600+250')
+        newConnectionWindow.resizable(False, False)
+        
 
+        
+        newConnectionWindow.mainloop()
+        pass    
+
+    def clientWindow(self, clientTcpSocket):
         def receiveBroadcast(ClientTcpSocket, Broadcast):
             while True:
                 receiveContent = ClientTcpSocket.recv(1024).decode().split('##', 2)
